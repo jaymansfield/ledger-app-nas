@@ -25,7 +25,6 @@ python -m ledgerblue.loadApp \
 --targetId 0x31100004 \
 --fileName HEX_FILENAME.hex \
 --icon "0100000000ffffff00ffffffff7fff7ffebffebffd1fc16fec37f683f8bffd7ffd7ffefffeffffffff" \
---curve secp256k1 \
 --path "44'/2718'" \
 --apdu \
 --appName "Nebulas" \

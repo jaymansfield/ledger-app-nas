@@ -30,7 +30,7 @@ APPVERSION_N=0
 APPVERSION_P=0
 APPVERSION = $(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)
 ICONNAME=$(CURDIR)/icon_nebulas.gif
-APP_LOAD_PARAMS = --delete --appFlags 0x00 --path "44'/2718'" --curve secp256k1 $(COMMON_LOAD_PARAMS)
+APP_LOAD_PARAMS = --delete --appFlags 0x00 --path "44'/2718'" $(COMMON_LOAD_PARAMS)
 
 # Build configuration
 
