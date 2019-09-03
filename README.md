@@ -19,6 +19,7 @@ $ make load
 ```
 
 #### Loading a Precompiled HEX File
+
 ```bash
 python -m ledgerblue.loadApp \
 --delete \
@@ -33,6 +34,8 @@ python -m ledgerblue.loadApp \
 --dataSize 0x00000C00 \
 --tlv 
 ```
+
+Replace HEX_FILENAME.hex with the name of the build file.
 
 # General Structure
 
