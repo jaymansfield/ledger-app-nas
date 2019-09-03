@@ -17,6 +17,89 @@
 ********************************************************************************/
 #include "signature.h"
 #include "cx.h"
+#include "xrpBase58.h"
+
+uint8_t bip32_depth;
+uint32_t bip32_path[10];
+
+void get_address(char *addr)
+{
+    addr[0] = '\0';
+
+    uint8_t content[CX_RIPEMD160_SIZE];
+    {
+        uint8_t tmp[66];
+        cx_ecfp_public_key_t publicKey;
+        getPubKey(&publicKey);
+        os_memmove(tmp, publicKey.W, 65);
+
+        uint8_t output[33];
+        cx_sha3_t sha;
+        cx_sha3_init(&sha, 256);
+        cx_hash(&sha.header, CX_LAST, tmp, 65, output, 32);
+        ripemd160_32(content, output);
+
+        PRINTF("content:   %.*h\n", CX_RIPEMD160_SIZE, content);
+    }
+
+    uint8_t checksum[5];
+    {
+        uint8_t input[CX_RIPEMD160_SIZE + 2 + 1];
+        input[0] = 0x19;
+        input[1] = 0x57;
+        os_memmove(input + 2, content, CX_RIPEMD160_SIZE);
+
+        PRINTF("checksum input:   %.*h\n", CX_RIPEMD160_SIZE + 2, input);
+
+        uint8_t output[33];
+
+        cx_sha3_t sha;
+        cx_sha3_init(&sha, 256);
+        cx_hash(&sha.header, CX_LAST, input, CX_RIPEMD160_SIZE + 2, output, 32);
+
+        os_memmove(checksum, output, 4);
+
+        PRINTF("checksum:   %.*h\n", 4, checksum);
+    }
+
+    {
+        uint8_t address_temp[CX_RIPEMD160_SIZE + 4 + 2 + 1];
+        address_temp[0] = 0x19;
+        address_temp[1] = 0x57;
+
+        unsigned char outLen = 35;
+
+        os_memmove(address_temp + 2, content, CX_RIPEMD160_SIZE);
+        os_memmove(address_temp + 2 + CX_RIPEMD160_SIZE, checksum, 4);
+
+        PRINTF("base58 input:   %.*h\n", CX_RIPEMD160_SIZE + 4 + 2, address_temp);
+
+        xrp_encode_base58((unsigned char *)address_temp, CX_RIPEMD160_SIZE + 4 + 2, (unsigned char *)addr, outLen);
+        addr[35] = '\0';
+
+        PRINTF("address: %s\n", addr);
+    }
+}
+
+void getPubKey(cx_ecfp_public_key_t *publicKey) {
+    cx_ecfp_private_key_t privateKey;
+    uint8_t privateKeyData[32];
+
+    os_perso_derive_node_bip32(
+        CX_CURVE_256K1,
+        bip32_path, bip32_depth,
+        privateKeyData, NULL);
+
+    keys_secp256k1(publicKey, &privateKey, privateKeyData);
+    memset(privateKeyData, 0, sizeof(privateKeyData));
+    memset(&privateKey, 0, sizeof(privateKey));
+}
+
+void ripemd160_32(uint8_t *out, uint8_t *in) {
+    cx_ripemd160_t rip160;
+    cx_ripemd160_init(&rip160);
+    cx_hash(&rip160.header, CX_LAST, in, CX_SHA256_SIZE, out, CX_RIPEMD160_SIZE);
+}
 
 void keys_secp256k1(cx_ecfp_public_key_t *publicKey,
                     cx_ecfp_private_key_t *privateKey,

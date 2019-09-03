@@ -21,3 +21,7 @@
 unsigned char xrp_decode_base58(unsigned char WIDE *in, unsigned char length,
                                    unsigned char *out,
                                    unsigned char maxoutlen);
+
+unsigned char xrp_encode_base58(unsigned char WIDE *in, unsigned char length,
+                                   unsigned char *out,
+                                   unsigned char maxoutlen);

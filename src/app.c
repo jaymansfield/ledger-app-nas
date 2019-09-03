@@ -27,7 +27,8 @@
 
 #include <string.h>
 
-/*extern unsigned long _stack;
+/*
+extern unsigned long _stack;
 
 #define STACK_CANARY (*((volatile uint32_t*) &_stack))
 
@@ -37,11 +38,11 @@ void init_canary() {
 
 void check_canary() {
     if (STACK_CANARY != 0xDEADBEEF)
+    {
+        PRINTF("OUT OF BOUNDS!\n");
         THROW(EXCEPTION_OVERFLOW);
+    }
 }*/
-
-uint8_t bip32_depth;
-uint32_t bip32_path[10];
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
@@ -144,20 +145,6 @@ bool extractBip32(uint8_t *depth, uint32_t path[10], uint32_t rx, uint32_t offse
     return 1;
 }
 
-void getPubKey(cx_ecfp_public_key_t *publicKey) {
-    cx_ecfp_private_key_t privateKey;
-    uint8_t privateKeyData[32];
-
-    os_perso_derive_node_bip32(
-        CX_CURVE_256K1,
-        bip32_path, bip32_depth,
-        privateKeyData, NULL);
-
-    keys_secp256k1(publicKey, &privateKey, privateKeyData);
-    memset(privateKeyData, 0, sizeof(privateKeyData));
-    memset(&privateKey, 0, sizeof(privateKey));
-}
-
 bool process_chunk(volatile uint32_t *tx, uint32_t rx, bool getBip32) {
     int packageIndex = G_io_apdu_buffer[OFFSET_PCK_INDEX];
     int packageCount = G_io_apdu_buffer[OFFSET_PCK_COUNT];
@@ -183,8 +170,6 @@ bool process_chunk(volatile uint32_t *tx, uint32_t rx, bool getBip32) {
     return packageIndex == packageCount;
 }
 
-//region View Transaction Handlers
-
 int getTxData(
         char *title, int max_title_length,
         char *key, int max_key_length,
@@ -208,7 +193,45 @@ int getTxData(
     return 0;
 }
 
-//endregion
+int getAddrData(
+        char *title, int max_title_length,
+        char *key, int max_key_length,
+        char *value, int max_value_length,
+        int page_index,
+        int chunk_index,
+        int *page_count_out,
+        int *chunk_count_out) {
+
+    *page_count_out = 1;
+    *chunk_count_out = 1;
+
+    snprintf(title, max_title_length, "Export Public Key");
+    snprintf(key, max_key_length, "Wallet Address");
+
+    //check_canary();
+    get_address(value);
+    //check_canary();
+
+    return 0;
+}
+
+void addr_accept() {
+    cx_ecfp_public_key_t publicKey;
+    getPubKey(&publicKey);
+
+    os_memmove(G_io_apdu_buffer, publicKey.W, 65);
+    int pos = 65;
+
+    set_code(G_io_apdu_buffer, pos, APDU_CODE_OK);
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, pos + 2);
+    view_idle(0);
+}
+
+void addr_reject() {
+    set_code(G_io_apdu_buffer, 0, APDU_CODE_COMMAND_NOT_ALLOWED);
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
+    view_idle(0);
+}
 
 void reject_transaction() {
     set_code(G_io_apdu_buffer, 0, APDU_CODE_COMMAND_NOT_ALLOWED);
@@ -219,6 +242,7 @@ void reject_transaction() {
 void sign_transaction() {
     PRINTF("sign_transaction - start\n");
 
+    //check_canary();
     cx_ecfp_private_key_t privateKey;
 
     {
@@ -246,6 +270,7 @@ void sign_transaction() {
         length = sign_secp256k1(hash, &privateKey);
     }
 
+    //check_canary();
     set_code(G_io_apdu_buffer, length, APDU_CODE_OK);
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, length + 2);
     view_idle(0);
@@ -256,7 +281,7 @@ void app_main() {
     volatile unsigned int tx = 0;
     volatile unsigned int flags = 0;
 
-    view_set_tx_event_handlers(&getTxData, &sign_transaction, &reject_transaction);
+    //init_canary();
 
     for (;;) {
         volatile uint16_t sw = 0;
@@ -314,6 +339,22 @@ void app_main() {
                         break;
                     }
 
+                    case 0x03: { // get public key (requires user confirmation)
+                        PRINTF("START - VERIFY PUB KEY\n");
+                        if (!extractBip32(&bip32_depth, bip32_path, rx, OFFSET_DATA)) {
+                            THROW(APDU_CODE_DATA_INVALID);
+                        }
+
+                        PRINTF("BIP32_PATH:%.*H\n", 10, bip32_path);
+                        PRINTF("BIP32_DEPTH:%d\n", bip32_depth);
+
+                        view_set_event_handlers(&getAddrData, &addr_accept, &addr_reject);
+                        view_addr_show(0);
+
+                        flags |= IO_ASYNCH_REPLY;
+                        break;
+                    }
+
                     case 0x02: { // sign transaction
                         if (!process_chunk(tx, rx, true))
                             THROW(APDU_CODE_OK);
@@ -327,6 +368,7 @@ void app_main() {
                             THROW(APDU_CODE_BAD_KEY_HANDLE);
                         }
 
+                        view_set_event_handlers(&getTxData, &sign_transaction, &reject_transaction);
                         view_tx_show(0);
 
                         flags |= IO_ASYNCH_REPLY;

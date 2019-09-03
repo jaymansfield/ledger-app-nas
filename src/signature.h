@@ -18,8 +18,17 @@
 
 #include "os.h"
 
+#define PK_COMPRESSED_LEN       33
+
+extern uint8_t bip32_depth;
+extern uint32_t bip32_path[10];
+
 void keys_secp256k1(cx_ecfp_public_key_t *publicKey,
                     cx_ecfp_private_key_t *privateKey,
                     const uint8_t privateKeyData[32]);
 
 int sign_secp256k1(const uint8_t* hash, cx_ecfp_private_key_t *privateKey);
+
+void get_address(char *addr);
+void ripemd160_32(uint8_t *out, uint8_t *in);
+void getPubKey(cx_ecfp_public_key_t *publicKey);

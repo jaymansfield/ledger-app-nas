@@ -46,6 +46,12 @@ const ux_menu_entry_t menu_transaction_info[] = {
         UX_MENU_END
 };
 
+const ux_menu_entry_t menu_address_info[] = {
+        {NULL, view_sign_transaction, 0, NULL, "Export public key", NULL, 0, 0},
+        {NULL, reject, 0, &C_icon_back, "Reject", NULL, 60, 40},
+        UX_MENU_END
+};
+
 const ux_menu_entry_t menu_main[] = {
         {NULL, NULL, 0, &C_icon_app, "Use wallet to", "view accounts", 33, 12},
         {menu_about, NULL, 0, NULL, "About", NULL, 0, 0},
@@ -65,19 +71,13 @@ viewctl_delegate_update ehUpdateTx = NULL;
 delegate_sign_tx ehSignTx = NULL;
 delegate_reject_tx ehRejectTx = NULL;
 
-void view_set_tx_event_handlers(viewctl_delegate_update ehUpdate,
+void view_set_event_handlers(viewctl_delegate_update ehUpdate,
                                 delegate_sign_tx ehSign,
                                 delegate_reject_tx ehReject) {
     ehSignTx = ehSign;
     ehRejectTx = ehReject;
     ehUpdateTx = ehUpdate;
 }
-
-//viewctl_delegate_update ehUpdateAddr = NULL;
-
-//void view_set_addr_event_handlers(viewctl_delegate_update ehUpdate) {
-//    ehUpdateAddr = ehUpdate;
-//}
 
 // ------ Event handlers
 
@@ -87,7 +87,6 @@ void io_seproxyhal_display(const bagl_element_t *element) {
 
 void view_tx_show(unsigned int unused) {
     UNUSED(unused);
-    //if (ehUpdateAddr == NULL) { return; }
 
     viewctl_start(ehUpdateTx,
                   NULL,
@@ -95,22 +94,14 @@ void view_tx_show(unsigned int unused) {
                   0);
 }
 
-/*
-void view_addr_exit(unsigned int unused) {
-    G_io_apdu_buffer[0] = 0x90;
-    G_io_apdu_buffer[1] = 0x00;
-    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
-    view_idle(0);
-}
+void view_addr_show(unsigned int unused) {
+    UNUSED(unused);
 
-void view_addr_show(unsigned int start_page) {
-    if (ehUpdateAddr == NULL) { return; }
-
-    viewctl_start(ehUpdateAddr,
+    viewctl_start(ehUpdateTx,
                   NULL,
-                  view_addr_exit,
-                  start_page);
-}*/
+                  view_addr_menu,
+                  0);
+}
 
 /////////////////////////////////
 
@@ -123,6 +114,8 @@ void view_sign_transaction(unsigned int unused) {
 }
 
 void reject(unsigned int unused) {
+    UNUSED(unused);
+
     if (ehRejectTx != NULL) {
         ehRejectTx();
     }
@@ -141,4 +134,9 @@ void view_idle(unsigned int ignored) {
 void view_display_tx_menu(unsigned int ignored) {
     view_uiState = UI_TRANSACTION;
     UX_MENU_DISPLAY(0, menu_transaction_info, NULL);
+}
+
+void view_addr_menu(unsigned int ignored) {
+    view_uiState = UI_ADDRESS;
+    UX_MENU_DISPLAY(0, menu_address_info, NULL);
 }

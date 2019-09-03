@@ -22,7 +22,8 @@
 
 enum UI_STATE {
     UI_IDLE,
-    UI_TRANSACTION
+    UI_TRANSACTION,
+    UI_ADDRESS
 };
 
 extern enum UI_STATE view_uiState;
@@ -32,26 +33,15 @@ typedef void (*delegate_reject_tx)();
 
 typedef void (*delegate_sign_tx)();
 
-//------ Event handlers
-/// view_set_sign_tx_event_handler
-/// \param delegate
-void view_set_tx_event_handlers(viewctl_delegate_update ehUpdate,
+void view_set_event_handlers(viewctl_delegate_update ehUpdate,
                                 delegate_sign_tx ehSign,
                                 delegate_reject_tx ehReject);
 
-/// view_set_addr_event_handlers
-/// \param delegate
-//void view_set_addr_event_handlers(viewctl_delegate_update ehUpdate);
-
-//------ Common functions
-/// view_init
 void view_init(void);
-
-/// view_idle
 void view_idle(unsigned int ignored);
 
-/// view_display_tx_menu
 void view_display_tx_menu(unsigned int ignored);
+void view_addr_menu(unsigned int ignored);
 
-/// view_tx_show
 void view_tx_show(unsigned int unused);
+void view_addr_show(unsigned int unused);
